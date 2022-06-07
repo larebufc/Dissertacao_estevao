@@ -1,0 +1,150 @@
+---
+title: "Analise Igreja Icó"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  word_document: default
+---
+
+###Pacotes necessários
+
+```{r}
+if(!require(readxl)) install.packages("ggplot2");require(readxl) 
+if(!require(ggplot2)) install.packages("ggplot2");require(ggplot2) 
+if(!require(extrafont)) install.packages("extrafont");require(extrafont) 
+
+```
+
+
+## Para mudar tipo de fonte para legendas, rótulos etc.
+
+
+```{r eval=FALSE, include=FALSE}
+##desativada a execução automática
+
+font_import() # only do this one time - it takes a while
+
+```
+
+
+
+```{r include=FALSE}
+
+loadfonts(device = "win")
+windowsFonts(Times=windowsFont("TT Times New Roman"))
+theme_set(theme_bw(base_size=12, base_family = 'Times New Roman')+ 
+            theme(panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank()))
+
+
+```
+
+
+
+
+
+
+
+### Carregamento e construção da base de dados.
+
+
+```{r}
+#worksp="~/Artigos Esequiel/Codigos"
+#setwd(worksp)
+
+Igreja_Monte_Dados_Organizados <- read_excel("F:/Script_ados_ultrassom_igreja/Igreja_Monte_Dados_Organizados.xlsx")
+
+
+Dados=Igreja_Monte_Dados_Organizados 
+
+attach(Dados)
+names(Dados)
+
+
+valor = Dados[,c("M0","M1","M2","M3","M4","M5")]
+Quadrante = Dados$Quadrante
+Altura = Dados$Altura
+Painel = Dados$Painel
+Lado = Dados$Lado
+D_m = c(0,10,15,20,25,30)
+
+n=nrow(Dados)
+df=numeric()
+for(j in 1:n){
+  df1=cbind(D_m,1:6,j,Altura[j], Lado[j],Painel[j],Quadrante[j],t(valor[j,]))
+  df = rbind(df,df1)
+}
+
+df = data.frame(df)
+
+names(df) = c("x","ID", "Perfil","Altura", "Lado", "Painel", "Quadrante","Valor")
+
+
+```
+
+
+
+
+#### FIGURA 1: Gráfico comparativo para os perfis de medições, segundo o lado da igreja.
+
+
+```{r fig.height=5, fig.width=8}
+
+p <- ggplot(data = df, aes(x = x, y = Valor, group = ID))
+
+
+p + geom_line(aes(colour=as.factor(Lado),group=Perfil),size=1) + theme_bw()+
+  geom_point(aes(), size=1.2)+  
+  scale_x_continuous(name="Distance (cm)", limits=c(0, 30))+
+  scale_y_continuous(name=expression(paste("Time"," ",(mu*s)))   )+
+  theme(axis.title = element_text(size = 30,family="Times New Roman"),
+         legend.title = element_text( size = 15,family="Times New Roman"),  
+        legend.text = element_text(size = 15,family="Times New Roman"),
+        legend.key.size = unit(1, "cm"),
+        axis.text.y = element_text(size=15, angle=45),
+        axis.text.x = element_text(size=15))
+ 
+                   # TT Times New Roman
+                 
+# labs(x = "Distance (m)", y = " Time (s) ")+ 
+          # expression(paste("Value is ", sigma,",", R^{2},'=',r2.value))
+
+```
+
+```{r}
+
+p <- ggplot(data = df, aes(x = x, y = Valor, group = Lado))
+
+
+p +  stat_smooth(aes(group = 1),method = "auto", col="black") +
+  stat_summary(aes(group = 1),geom = "point", fun = mean, shape = 17, size = 3)+        
+  facet_grid(.~Lado)  +   ### para plotar todos os gráficos com base em id
+  geom_point(aes(), size=1)+ 
+  labs(x = "Distância (cm)",  y =expression(paste("Tempo"," ",(mu*s)))) + theme(legend.position='none')
+                      
+```
+Embora a quantidade de pontos seja bem menor no gráfico da direita, a curva média tende a se afastar mais da linearidade, o que pode indicar uma maior heterogeneidade na alvenaria. Nada se pode dizer sobre a variabilidade, uma vez que menor quantidade de dados tende a promover maior variabilidade.
+
+
+
+## Gráfico comparativo dos dados da igreja, conforme a altura da medição
+
+```{r}
+
+p <- ggplot(data = df, aes(x = x, y = Valor, group = Altura))
+
+
+p +  stat_smooth(aes(group = 1),method = "auto", col="black") +
+  stat_summary(aes(group = 1),geom = "point", fun = mean, shape = 17, size = 3)+        
+  facet_grid(.~Altura)  +   ### para plotar todos os gráficos com base em id
+  geom_point(aes(), size=1)+ 
+  labs(x = "Distância (cm)",  y =expression(paste("Tempo"," ",(mu*s)))) + theme(legend.position='none')
+                      
+```
+
+Alturas  miores fazem a curva média ficar mais afastada de um comportamento linear, o que pode indicar maior heterogeneidade no material da alvenaria. A variabilidade entre os pontos também parece maior, quando as medições são feitas em alturas maiores. Conforme estudo anterior, a perturbação  vista no terceiro gráfico, na medição 25 cm, pode indicar uma anomalia na parede. Está é uma situação onde a onda pode estar se deslocando por cima da argamassa, não adentrando a parede.
+
+
+
+
